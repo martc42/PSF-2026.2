@@ -1,6 +1,27 @@
 import tkinter as tk
 import math
 
+
+## raio incidente inicial e raio refratado inicial modelados com certo grau de "perfeição"....
+
+## erros a notar:
+
+        ## para ângulos de abertura maiores do que 60º, em casos nos quais o raio interno termina na base,
+        ## o modelo atual trata o prisma como se continuasse para baixo, ignorando o fim da estrutura.
+
+        ## sem acomodação para reflexão interna total: em casos de ângulo limite, o programa
+        ## gera ValueError para valores de seno maiores que 1
+
+        ## para um raio transmitido paralelo à base do prisma, algo acontece com a modelagem da angulação
+        ## que o faz desviar para cima de modo aberrante.
+
+# erros menores:
+
+        # prolongação do eixo normal à superfície do lado direito não é, de fato, normal ao lado direito.
+
+# em casos fora destes, o programa deve funcionar de modo fisicamente coerente.
+
+
 # cria canvas
 height = 500
 width = 1000
@@ -51,8 +72,8 @@ x_inc = (height/2)/(math.tan(math.pi*thetaN/180))
     
 canvas.create_line(xne, yn, 0, yn - y_inc, dash=40, fill='grey') # NORMAL ESQUERDA
 canvas.create_line(xne, yn, xne + x_inc, height, dash=40, fill='#d6d6d6') # NORMAL ESQUERDA: PROLONGADA
-canvas.create_line(xnd, yn, width, yn - y_inc, dash=40, fill='grey') # NORMAL DIREITA
-canvas.create_line(xnd, yn, xnd - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
+
+### normal direita desenhada após traço do raio interno para coincidir com ponto de incidencia ###
 
 ### RAIO INCIDENTE ###
 
@@ -92,7 +113,7 @@ xne = X1 - (B/2)     #COORDS DE PARTIDA: MEIO DO LADO ESQUERDO
 yn = height/2
 
 
-if theta2 < thetaN2: # raio abaixo da horizontal
+if theta2 < thetaN2: # raio de dentro abaixo da horizontal
 
     basepequena = xnd-xne
 
@@ -109,10 +130,65 @@ if theta2 < thetaN2: # raio abaixo da horizontal
 
     canvas.create_line(xne, yn, xne+basepequena+xi, yn+yi, width=2, fill='#0000ff')
 
-elif theta2 == thetaN2: # raio na horizontal
+    ## NORMAL DIREITA PARTINDO DO PONTO DE INCIDENCIA NO LADO DIREITO
+
+    xne = X1 - (B/2)     #COORDS DE PARTIDA
+    XD = xne+basepequena+xi
+    YD = yn+yi
+
+    y_inc = (math.tan(math.pi*thetaN/180))*(xne)
+    x_inc = (height/2)/(math.tan(math.pi*thetaN/180))
+
+    canvas.create_line(XD, YD, width, YD - y_inc, dash=40, fill='grey') # NORMAL DIREITA
+    #canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
+
+    # RAIO PRA FORA:
+
+    theta3 = angcim + thetaN
+    theta3rad = (theta3*math.pi)/180
+
+    theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
+    theta4 = (theta4rad*180)/math.pi
+
+    print(theta1, theta2, theta3, theta4)
+
+    if theta4 < thetaN:
+
+        xf = width - XD
+        yf = math.tan(theta4rad)*xf
+        
+        canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+
+    elif theta4 == thetaN:
+    
+        xf = width - XD
+        yf = math.tan(theta4rad)*xf
+        
+        canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+
+    elif theta4 < 90:
+
+        P = theta4 - thetaN
+        Prad = (P*math.pi)/180
+
+        xf = width - XD
+        yf = math.tan(Prad)*xf
+
+        canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
+
+elif theta2 == thetaN2: # raio de dentro na horizontal
     canvas.create_line(xne, yn, width, yn, width=2, fill='#0000ff')
 
-elif theta2 < 90: # raio acima da horizontal
+    # RAIO PRA FORA:
+    
+    theta3 = thetaN
+    
+    theta4rad = math.asin((n2/n1)*math.sin(thetaNrad))
+    theta4 = (theta4rad*180)/math.pi
+
+    print(theta1, theta2, theta3, theta4)
+
+elif theta2 < 90: # raio de dentro acima da horizontal
 
     basepequena = xnd-xne
 
@@ -124,10 +200,86 @@ elif theta2 < 90: # raio acima da horizontal
 
     lado = (math.sin(angcimrad)/math.sin(gmmrad))*(basepequena)
 
-    xi = lado*(math.cos(betarad))
+    xi = lado*(math.cos(betarad)) 
     yi = lado*(math.sin(betarad))
 
     canvas.create_line(xne, yn, xne+basepequena-xi, yn-yi, width=2, fill='#0000ff')
+
+    ## NORMAL DIREITA PARTINDO DO PONTO DE INCIDENCIA NO LADO DIREITO
+
+    xne = X1 - (B/2)     #COORDS DE PARTIDA
+    XD = xne+basepequena-xi
+    YD = yn-yi
+
+    y_inc = (math.tan(math.pi*thetaN/180))*(XD)
+    x_inc = (yn)/(math.tan(math.pi*thetaN/180))
+
+    canvas.create_line(XD, YD, width, YD - y_inc, dash=40, fill='grey') # NORMAL DIREITA
+    #canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
+
+    ################### RAIO INDO P/ FORA
+
+    theta3 = 90 - angcim - beta
+    theta3rad = (theta3*math.pi)/180
+
+    theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
+    theta4 = (theta4rad*180)/math.pi
+
+    print(theta1, theta2, theta3, theta4)
+
+    if theta4 < thetaN:
+
+        xf = width - XD
+        yf = math.tan(theta4rad)*xf
+        
+        canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+
+    elif theta4 == thetaN:
+    
+        xf = width - XD
+        yf = math.tan(theta4rad)*xf
+        
+        canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+
+    elif theta4 < 90:
+
+        P = theta4 - thetaN
+        Prad = (P*math.pi)/180
+
+        xf = width - XD
+        yf = math.tan(Prad)*xf
+
+        canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
+    
+
+
+###### TRAÇO GERAL DO RAIO 4 ######
+
+#if theta4 < thetaN:
+
+ #   xf = width - (coordfinalx)
+  #  yf = math.tan(theta4rad)*xf
+    
+   # canvas.create_line((coorfinalx), (coordfinaly), width, yn-yf, width=2, fill='#0000ff')
+
+#elif theta4 == thetaN:
+    
+ #   xf = width - (coordfinalx)
+  #  yf = math.tan(theta4rad)*xf
+    
+   # canvas.create_line((coorfinalx), (coordfinaly), width, (coordfinaly), width=2, fill='#0000ff')
+
+#elif theta4 < 90:
+
+ #   P = theta4 - thetaN
+  #  Prad = (P*math.pi)/180
+
+    #xf = width - (coordfinalx)
+   # yf = math.tan(Prad)*xf
+
+   # canvas.create_line((coordfinalx), (coordfinaly), width, yn+yf, width=2, fill='#0000ff')
+    
+
     
 
         
