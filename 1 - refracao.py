@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import math
 
 # cria ambiente das caixas de texto
@@ -50,15 +51,15 @@ def fazer_as_linha():
         divisor1 = canvas.create_line(0, 200, 1000, 200, width=2)
         divisor2 = canvas.create_line(0, 400, 1000, 400, width=2)
 
+    # verifica se o angulo é coerente
+    if th1 < 0 or th1 >= 90:
+        messagebox.showerror('Erro', 'ValueError: Ângulo de incidência deve ser maior ou igual a zero e menor que 90º.', parent=canvas)
+        raise ValueError('Ângulo de incidência deve ser maior ou igual a zero e menor que 90º.')
 
     # mostra angulo no canvas antes da conversao para nao perder decimais
     canvas.create_text((20, 500), text=f'Ângulo de incidência: {th1:.2f}º', font=('Arial', 12), anchor='w')
 
     th1 = (th1*math.pi)/180 # grau pra rad
-
-    # verifica se o angulo é coerente
-    if th1 < 0 or th1 >= math.pi/2:
-        raise ValueError('Ângulo de incidência deve ser maior ou igual a zero e menor que 90º.')
 
     # condicional p/ reflexao total:
     
@@ -124,7 +125,7 @@ def fazer_as_linha():
 
         canvas.create_text((20, 520), text=f'Àngulo refratado: {th2*180/math.pi:.2f}º', font=('Arial', 12), anchor='w') # mostra th2 no canvas: th1 ja foi mostrado no inicio do codigo
 
-    else: # caso 2 - "vidro pro ar" - CONDICIONAL INCOMPLETA!
+    else: # caso 2 - "vidro pro ar" 
 
         if math.sin(th1) > n2/n1 or math.sin(th1) == n2/n1: # dentro ou acima do angulo limite
             ix = abs(oy*math.tan(th1))
