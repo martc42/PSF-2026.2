@@ -1,25 +1,15 @@
 import tkinter as tk
+from tkinter import messagebox
 import math
 
+## incidentes a notar:
 
-## raio incidente inicial e raio refratado inicial modelados com certo grau de "perfeição"....
-
-## erros a notar:
-
-        ## para ângulos de abertura maiores do que 60º, em casos nos quais o raio interno termina na base,
-        ## o modelo atual trata o prisma como se continuasse para baixo, ignorando o fim da estrutura.
-
-        ## sem acomodação para reflexão interna total: em casos de ângulo limite, o programa
-        ## gera ValueError para valores de seno maiores que 1
-
-        ## para um raio transmitido paralelo à base do prisma, algo acontece com a modelagem da angulação
-        ## que o faz desviar para cima de modo aberrante.
+        ## reflexão interna total implementada a custo de ângulos de abertura maiores do que 60º.
 
 # erros menores:
 
-        # prolongação do eixo normal à superfície do lado direito não é, de fato, normal ao lado direito.
-
-# em casos fora destes, o programa deve funcionar de modo fisicamente coerente.
+        # prolongação do eixo normal à superfície do lado direito às vezes aparenta não ser, de fato, normal. isso foi
+        # de certo modo "consertado", ou seja, estava mais aparente antes, mas restam dúvidas.
 
 
 # cria ambiente das caixas de texto
@@ -70,11 +60,13 @@ def programa_inteiro_lol():
      
     # define prisma
     
-    if abertura >= 180 or abertura <= 0:
-        raise ValueError('Ângulo de abertura deve ser menor que 180° e maior que 0°.')
+    if abertura > 180 or abertura <= 0:
+        messagebox.showerror('Erro', 'ValueError: Ângulo de abertura deve ser menor que 60° e maior que 0°.', parent=canvas)
+        raise ValueError('Ângulo de abertura deve ser menor que 60° e maior que 0°.')
+        
 
     beta = (180-abertura)/2 # angulos agudos da base
-    thetaN = 90 - beta # angulo para traço do raio incidente
+    thetaN = 90 - beta # angulo para traço do raio incidente // angulo entre horizontal e reta normal
 
 
     abertura = (abertura*math.pi)/180 #conversao p/ rad
@@ -145,7 +137,7 @@ def programa_inteiro_lol():
 
     if theta2 < thetaN2: # raio de dentro abaixo da horizontal
 
-        basepequena = xnd-xne
+        basepequena = xnd-xne 
 
         angcim = thetaN - theta2
         angcimrad = (angcim*math.pi)/180
@@ -153,10 +145,10 @@ def programa_inteiro_lol():
         gmm = beta - angcim
         gmmrad = (gmm*math.pi)/180
 
-        lado = (math.sin(angcimrad)/math.sin(gmmrad))*(basepequena)
+        lado = (math.sin(angcimrad)/math.sin(gmmrad))*(basepequena) # lei dos senos para calcular desvio lateral da incidencia do raio no lado esquerdo
 
-        xi = lado*(math.cos(betarad))
-        yi = lado*(math.sin(betarad))
+        xi = lado*(math.cos(betarad)) # projeçao do lado em x
+        yi = lado*(math.sin(betarad)) # projeçao do lado em y
 
         canvas.create_line(xne, yn, xne+basepequena+xi, yn+yi, width=2, fill='#0000ff')
 
@@ -166,45 +158,73 @@ def programa_inteiro_lol():
         XD = xne+basepequena+xi
         YD = yn+yi
 
-        y_inc = (math.tan(math.pi*thetaN/180))*(xne)
-        x_inc = (height/2)/(math.tan(math.pi*thetaN/180))
+        y_inc = (math.tan(math.pi*thetaN/180))*(width-XD)
+        x_inc = ((height/2) - yi)/(math.tan(math.pi*thetaN/180))
 
         canvas.create_line(XD, YD, width, YD - y_inc, dash=40, fill='grey') # NORMAL DIREITA
-        #canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
+        canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
 
         # RAIO PRA FORA:
 
         theta3 = angcim + thetaN
         theta3rad = (theta3*math.pi)/180
 
-        theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
-        theta4 = (theta4rad*180)/math.pi
+        if math.sin(theta3rad) > n1/n2 or math.sin(theta3rad) == n1/n2: # REFLEXAO INTERNA TOTAL
 
-        print(theta1, theta2, theta3, theta4)
-
-        if theta4 < thetaN:
-
-            xf = width - XD
-            yf = math.tan(theta4rad)*xf
+            A = 90 - (thetaN + theta3)
+            Arad = (A*math.pi)/180
+            xA = yi*math.tan(Arad)
             
-            canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+            canvas.create_line(XD, YD, XD-xA, height*(3/4), width=2, fill='#0000ff')
 
-        elif theta4 == thetaN:
-        
-            xf = width - XD
-            yf = math.tan(theta4rad)*xf
+            # raio transmitido:
+            theta4 = math.asin(math.sin(Arad)*(n2/n1))
+            theta4rad = (theta4*math.pi)/180
+
+            xB = (height/4)*math.tan(theta4rad)
+
+            canvas.create_line(XD-xA, height*(3/4), XD-xA-xB, height, width=2, fill='#0000ff')
+
+            canvas.create_text((1, height-37), text=f'Ângulo incidindo para fora: {A:.3f}º', font=('Arial', 10), anchor='w')
+            canvas.create_text((1, height-21), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
+
+        else: 
+
+            theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
+            theta4 = (theta4rad*180)/math.pi
+
+            canvas.create_text((1, height-37), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
+
+            if theta4 < thetaN:
+
+                G = thetaN - theta4
+                Grad = (G*math.pi)/180
+
+                xf = width - XD
+                yf = math.tan(Grad)*xf
+
+                xf = width - XD
+                yf = math.tan(theta4rad)*xf
+                
+                canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+
+            elif theta4 == thetaN:
             
-            canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+                xf = width - XD
+                yf = math.tan(theta4rad)*xf
+                
+                canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+            
+            elif theta4 < 90:
 
-        elif theta4 < 90:
+                P = theta4 - thetaN
+                Prad = (P*math.pi)/180
 
-            P = theta4 - thetaN
-            Prad = (P*math.pi)/180
+                xf = width - XD
+                yf = math.tan(Prad)*xf
 
-            xf = width - XD
-            yf = math.tan(Prad)*xf
+                canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
 
-            canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
 
     elif theta2 == thetaN2: # raio de dentro na horizontal
         canvas.create_line(xne, yn, width, yn, width=2, fill='#0000ff')
@@ -212,11 +232,33 @@ def programa_inteiro_lol():
         # RAIO PRA FORA:
         
         theta3 = thetaN
-        
-        theta4rad = math.asin((n2/n1)*math.sin(thetaNrad))
-        theta4 = (theta4rad*180)/math.pi
+        theta3rad = (theta3*math.pi)/180
 
-        print(theta1, theta2, theta3, theta4)
+        if math.sin(theta3rad) > n1/n2 or math.sin(theta3rad) == n1/n2: # REFLEXAO INTERNA TOTAL
+
+            A = 90 - (thetaN + theta3)
+            Arad = (A*math.pi)/180
+            xA = yi*math.tan(Arad)
+            
+            canvas.create_line(XD, YD, XD-xA, height*(3/4), width=2, fill='#0000ff')
+
+            # raio transmitido:
+            theta4 = math.asin(math.sin(Arad)*(n2/n1))
+            theta4rad = (theta4*math.pi)/180
+
+            xB = (height/4)*math.tan(theta4rad)
+
+            canvas.create_line(XD-xA, height*(3/4), XD-xA-xB, height, width=2, fill='#0000ff')
+
+            canvas.create_text((1, height-37), text=f'Ângulo incidindo para fora: {A:.3f}º', font=('Arial', 10), anchor='w')
+            canvas.create_text((1, height-21), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
+
+        else:
+        
+            theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
+            theta4 = (theta4rad*180)/math.pi
+
+            canvas.create_text((1, height-37), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
 
     elif theta2 < 90: # raio de dentro acima da horizontal
 
@@ -228,10 +270,10 @@ def programa_inteiro_lol():
         gmm = beta - angcim
         gmmrad = (gmm*math.pi)/180
 
-        lado = (math.sin(angcimrad)/math.sin(gmmrad))*(basepequena)
+        lado = (math.sin(angcimrad)/math.sin(gmmrad))*(basepequena) # lei dos senos para calcular desvio lateral da incidencia do raio no lado esquerdo
 
-        xi = lado*(math.cos(betarad)) 
-        yi = lado*(math.sin(betarad))
+        xi = lado*(math.cos(betarad)) # projeçao do lado em x
+        yi = lado*(math.sin(betarad)) # projeçao do lado em y
 
         canvas.create_line(xne, yn, xne+basepequena-xi, yn-yi, width=2, fill='#0000ff')
 
@@ -241,81 +283,77 @@ def programa_inteiro_lol():
         XD = xne+basepequena-xi
         YD = yn-yi
 
-        y_inc = (math.tan(math.pi*thetaN/180))*(XD)
-        x_inc = (yn)/(math.tan(math.pi*thetaN/180))
+        y_inc = (math.tan(math.pi*thetaN/180))*(width-XD)
+        x_inc = ((height/2) - yi)/(math.tan(math.pi*thetaN/180))
 
         canvas.create_line(XD, YD, width, YD - y_inc, dash=40, fill='grey') # NORMAL DIREITA
-        #canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
+        canvas.create_line(XD, YD, XD - x_inc, height, dash=40, fill='#d6d6d6') # NORMAL DIREITA: PROLONGADA
 
         ################### RAIO INDO P/ FORA
 
         theta3 = 90 - angcim - beta
         theta3rad = (theta3*math.pi)/180
 
-        theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
-        theta4 = (theta4rad*180)/math.pi
+        if math.sin(theta3rad) > n1/n2 or math.sin(theta3rad) == n1/n2: # REFLEXÃO INTERNA TOTAL
 
-        print(theta1, theta2, theta3, theta4)
-
-        if theta4 < thetaN:
-
-            xf = width - XD
-            yf = math.tan(theta4rad)*xf
+            A = 90 - (thetaN + theta3)
+            Arad = (A*math.pi)/180
+            xA = yi*math.tan(Arad)
             
-            canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+            canvas.create_line(XD, YD, XD-xA, height*(3/4), width=2, fill='#0000ff')
 
-        elif theta4 == thetaN:
-        
-            xf = width - XD
-            yf = math.tan(theta4rad)*xf
             
-            canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+            # raio transmitido:
+            theta4 = math.asin(math.sin(Arad)*(n2/n1))
+            theta4rad = (theta4*math.pi)/180
 
-        elif theta4 < 90:
+            xB = (height/4)*math.tan(theta4rad)
 
-            P = theta4 - thetaN
-            Prad = (P*math.pi)/180
+            canvas.create_line(XD-xA, height*(3/4), XD-xA-xB, height, width=2, fill='#0000ff')
 
-            xf = width - XD
-            yf = math.tan(Prad)*xf
+            canvas.create_text((1, height-37), text=f'Ângulo incidindo para fora: {A:.3f}º', font=('Arial', 10), anchor='w')
+            canvas.create_text((1, height-21), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
 
-            canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
+        else:
+
+            theta4rad = math.asin((n2/n1)*math.sin(theta3rad))
+            theta4 = (theta4rad*180)/math.pi
+
+            canvas.create_text((1, height-37), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
+
+            if theta4 < thetaN:
+
+                G = thetaN - theta4
+                Grad = (G*math.pi)/180
+
+                xf = width - XD
+                yf = math.tan(Grad)*xf
+                
+                canvas.create_line(XD, YD, width, yn-yf, width=2, fill='#0000ff')
+
+            elif theta4 == thetaN:
+            
+                xf = width - XD
+                yf = math.tan(theta4rad)*xf
+                
+                canvas.create_line(XD, YD, width, YD, width=2, fill='#0000ff')
+
+            elif theta4 > thetaN:
+
+                P = theta4 - thetaN
+                Prad = (P*math.pi)/180
+
+                xf = width - XD
+                yf = math.tan(Prad)*xf
+
+                canvas.create_line(XD, YD, width, yn+yf, width=2, fill='#0000ff')
+
+    canvas.create_text((1, height-200), text=f'Coef. refração externo: {n1}', font=('Arial', 10), anchor='w')
+    canvas.create_text((1, height-184), text=f'Coef. refração interno: {n2}', font=('Arial', 10), anchor='w')
         
-    canvas.create_text((1, height-53), text=f'Ângulo de incidência: {theta1}º', font=('Arial', 10), anchor='w')
-    canvas.create_text((1, height-38), text=f'Ângulo refratado: {theta2:.3f}º', font=('Arial', 10), anchor='w')
-    canvas.create_text((1, height-24), text=f'Ângulo incidente interno: {theta3:.3f}º', font=('Arial', 10), anchor='w')
-    canvas.create_text((1, height-10), text=f'Ângulo transmitido: {theta4:.3f}º', font=('Arial', 10), anchor='w')
-
-    canvas.create_text((1, height-100), text=f'Coef. refração externo: {n1}', font=('Arial', 10), anchor='w')
-    canvas.create_text((1, height-84), text=f'Coef. refração interno: {n2}', font=('Arial', 10), anchor='w')
-
-
-    ###### TRAÇO GERAL DO RAIO 4 ######
-
-    #if theta4 < thetaN:
-
-     #   xf = width - (coordfinalx)
-      #  yf = math.tan(theta4rad)*xf
-        
-       # canvas.create_line((coorfinalx), (coordfinaly), width, yn-yf, width=2, fill='#0000ff')
-
-    #elif theta4 == thetaN:
-        
-     #   xf = width - (coordfinalx)
-      #  yf = math.tan(theta4rad)*xf
-        
-       # canvas.create_line((coorfinalx), (coordfinaly), width, (coordfinaly), width=2, fill='#0000ff')
-
-    #elif theta4 < 90:
-
-     #   P = theta4 - thetaN
-      #  Prad = (P*math.pi)/180
-
-        #xf = width - (coordfinalx)
-       # yf = math.tan(Prad)*xf
-
-       # canvas.create_line((coordfinalx), (coordfinaly), width, yn+yf, width=2, fill='#0000ff')
-        
+    canvas.create_text((1, height-80), text=f'Ângulo de incidência: {theta1}º', font=('Arial', 10), anchor='w')
+    canvas.create_text((1, height-65), text=f'Ângulo refratado: {theta2:.3f}º', font=('Arial', 10), anchor='w')
+    canvas.create_text((1, height-52), text=f'Ângulo incidente interno: {theta3:.3f}º', font=('Arial', 10), anchor='w')
 
     
 # bota o botao pra funcionar
